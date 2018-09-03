@@ -6,7 +6,13 @@ class AdbController:
         self._down_touches = set()
         self._down_keys = set()
         self._adb = self._get_adb_shell(adb_path, ip, port)
-            
+    
+    def __del__(self):
+        for key in self._down_keys:
+            self.key_up(key)
+
+        self._end_touches()
+
     def _get_adb_shell(self, adb_path, ip, port):
         cmd_args = [adb_path, '-s', '{}:{}'.format(ip, port), 'shell']
         return subprocess.Popen(
@@ -29,6 +35,13 @@ class AdbController:
     def _end_event(self):
         self.tell_adb('EV_SYN', 'SYN_REPORT', 0)
 
+    def _send_key(self, key, down):
+        self.tell_adb('EV_KEY', 'KEY_' + key, down)
+        self._end_event()
+
+    def _begin_touches(self):
+        self.tell_adb('EV_KEY', 'BTN_TOUCH', 1)
+
     def _send_touches(self):
         for touch in self._down_touches:
             x, y = key_map[touch]
@@ -39,20 +52,23 @@ class AdbController:
         if self._down_touches:
             self._end_event()
 
+    def _end_touches(self):
+        self.tell_adb('EV_KEY', 'BTN_TOUCH', 0)
+        self._end_event()
+
     def key_down(self, key):
         key = key.upper()
         if key in keyboard_keys:
             if key not in self._down_keys:
                 self._down_keys.add(key)
-                self.tell_adb('EV_KEY', 'KEY_' + key, 1)
-                self._end_event()
+                self._send_key(key, down=1)
         else:
             if key not in self._down_touches:
                 if key not in key_map:
                     raise ValueError('Key not mapped: ', key)
 
                 if len(self._down_touches) == 0:
-                    self.tell_adb('EV_KEY', 'BTN_TOUCH', 1)
+                    self._begin_touches()
 
                 self._down_touches.add(key)
                 self._send_touches()
@@ -62,16 +78,14 @@ class AdbController:
         if key in keyboard_keys:
             if key in self._down_keys:
                 self._down_keys.remove(key)
-                self.tell_adb('EV_KEY', 'KEY_' + key, 0)
-                self._end_event()
+                self._send_key(key, down=0)
         else:
             if key in self._down_touches:
                 self._down_touches.remove(key)
                 self._send_touches()
 
                 if len(self._down_touches) == 0:
-                    self.tell_adb('EV_KEY', 'BTN_TOUCH', 0)
-                    self._end_event()
+                    self._end_touches()
 
     def press_key(self, key, t_during=0.01, t_after=0.01):
         self.key_down(key)
