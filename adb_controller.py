@@ -8,21 +8,7 @@ class AdbController:
         self._adb = self._get_adb_shell(adb_path, ip, port)
             
     def _get_adb_shell(self, adb_path, ip, port):
-        cmd = lambda args: [adb_path, *args] 
-        devices = subprocess.check_output(cmd(['devices'])).decode('utf-8')
-
-        def rem_nl(s):
-            i = len(s) - 1
-            while i > 0 and not s[i].isalnum():
-                i -= 1
-            return s[:i+1]
-
-        print(rem_nl(devices))
-        if 'offline' in devices:
-            print('Could not connect to server')
-            exit(1)
-
-        cmd_args = cmd(['-s', '{}:{}'.format(ip, port), 'shell'])
+        cmd_args = [adb_path, '-s', '{}:{}'.format(ip, port), 'shell']
         return subprocess.Popen(
             cmd_args, 
             stdin=subprocess.PIPE, 
@@ -87,7 +73,7 @@ class AdbController:
                     self.tell_adb('EV_KEY', 'BTN_TOUCH', 0)
                     self._end_event()
 
-    def press_key(self, key, t_during=0.01, t_after=0.02):
+    def press_key(self, key, t_during=0.01, t_after=0.01):
         self.key_down(key)
         time.sleep(t_during)
         self.key_up(key)

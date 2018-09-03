@@ -12,7 +12,7 @@ A Python interface to send key presses and screen touches to ADB.
 
 Status: supports arrow keys and a custom key map that I myself use.
 
-Known bugs: I've observed what looked like broken pipe between the controller and the stdout of the adb shell process. Reason is still unknown.
+Known bugs: I've observed what looked like broken pipe between the controller and the stdin of the adb shell process. Reason is still unknown.
 
 
 ## Install
@@ -36,7 +36,7 @@ adb_ctrl = AdbController(
 ```python
 AdbController.key_up(key)
 AdbController.key_up(key)
-AdbController.press_key(key)
+AdbController.press_key(key, t_during=0.01, t_after=0.01)
 AdbController.tell_adb(ev_type, ev_arg1, ev_arg2)
 ```
 
