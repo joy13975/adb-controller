@@ -8,18 +8,33 @@ class AdbController:
         self._adb = self._get_adb_shell(adb_path, ip, port)
 
     def __del__(self):
-        for key in self._down_keys:
-            self.key_up(key)
+        try:
+            for key in self._down_keys:
+                self.key_up(key)
+        except Exception as e:
+            print(e)
 
-        self._end_touches()
+        try:
+            self._end_touches()
+        except Exception as e:
+            print(e)
 
         try:
             self._adb.kill()
         except Exception as e:
-            raise e
+            print(e)
 
     def _get_adb_shell(self, adb_path, ip, port):
-        cmd_args = [adb_path, '-s', '{}:{}'.format(ip, port), 'shell']
+        device = '{}:{}'.format(ip, port)
+        # connect
+        cmd_args = [adb_path, 'connect', device]
+        out = subprocess.check_output(cmd_args).decode('utf-8')
+        if 'connected to' not in out:
+            print('Failed to connect to device.')
+            print(f'adb output: {out}')
+
+        # get shell
+        cmd_args = [adb_path, '-s', device, 'shell']
         return subprocess.Popen(
             cmd_args, 
             stdin=subprocess.PIPE, 
@@ -28,7 +43,7 @@ class AdbController:
     def tell_adb(self, ev_type, ev_arg1, ev_arg2):
         cmd_args = ' '.join([
             'sendevent',
-            '/dev/input/event6',
+            '/dev/input/event7',
             str(event_types[ev_type.upper()]), 
             str(arg1_codes[ev_arg1.upper()]), 
             str(ev_arg2),
@@ -58,7 +73,8 @@ class AdbController:
             self._end_event()
 
     def _end_touches(self):
-        self.tell_adb('EV_KEY', 'BTN_TOUCH', 0)
+        # self.tell_adb('EV_KEY', 'BTN_TOUCH', 0)
+        self.tell_adb('EV_SYN', 'SYN_MT_REPORT', 0)
         self._end_event()
 
     def key_down(self, key):
@@ -166,7 +182,7 @@ arg1_codes = {
     'KEY_LEFT': 0x69,
     'KEY_DOWN': 0x6c,
     'KEY_RIGHT': 0x6a,
-    'KEY_ESC': 0x01
+    'KEY_ESC': 0x01,
 }
 event_types = {
     'EV_SYN': 0x0,
@@ -193,7 +209,7 @@ key_map = {
     ']': (0x4cb, 0x17f),
     '\\': (0x477, 0x11e),
     'h': (0x1bc, 0x211), # dialog NO
-    'r': (0x22f, 0x0d7), # cancel auto quest guide
+    'r': (0x43e3, 0x742b), # cancel auto quest guide
     't': (0x281, 0x243), # confirm autoplay
     'y': (0x2d7, 0x0d8), # quest teleport
     'k': (0x35d, 0x212), # dialog YES
